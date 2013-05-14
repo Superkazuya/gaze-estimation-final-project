@@ -170,6 +170,9 @@ main(int argc, const char *argv[])
 	nosetip.x += cvGetImageROI(image).x;
 	nosetip.y += cvGetImageROI(image).y;
       }
+#ifdef POS_DISPLAY
+      printf("Nose: %d, %d ", nosetip.x, nosetip.y);
+#endif
 	/* NOSE 2
 	cvRectangle(image, cvPoint(tracking_window.x, tracking_window.y),
 	  cvPoint(tracking_window.x+tracking_window.width, tracking_window.y+tracking_window.height),
@@ -201,6 +204,11 @@ main(int argc, const char *argv[])
 	CV_RGB(255, 0, 0), 3, 8, 0);
       //l_eye.x += CALC_POINT(tracking_window).x - PUPIL_SIZE/2;
       //l_eye.y += CALC_POINT(tracking_window).y - PUPIL_SIZE/2;
+      lefteye.x = tracking_window.x+PUPIL_SIZE/2+l_eye.x;
+      lefteye.y = tracking_window.y+PUPIL_SIZE/2+l_eye.y;
+#ifdef POS_DISPLAY
+      printf("LEYE: %d, %d ", tracking_window.x+PUPIL_SIZE/2+l_eye.x, tracking_window.y+PUPIL_SIZE/2+l_eye.y);
+#endif
 
       //RIGHT EYE
       cvSetImageROI(image, r_eye);
@@ -229,12 +237,34 @@ main(int argc, const char *argv[])
       cvRectangle(image, cvPoint(tracking_window.x, tracking_window.y),
 	cvPoint(tracking_window.x+tracking_window.width, tracking_window.y+tracking_window.height),
 	CV_RGB(255, 0, 0), 3, 8, 0);
+      righteye.x = tracking_window.x+PUPIL_SIZE/2+r_eye.x;
+      righteye.y = tracking_window.y+PUPIL_SIZE/2+r_eye.y+300;
+#ifdef POS_DISPLAY
+      printf("REYE: %d, %d                               \r", tracking_window.x+PUPIL_SIZE/2+r_eye.x, tracking_window.y+PUPIL_SIZE/2+r_eye.y);
+#endif
       cvResetImageROI(image);
     }
     cvShowImage("Window", image);
+    //printf("%d %d %d %d : %d                     \r", mouse.root.x, mouse.root.y, mouse.win.x, mouse.win.y, i);
+    fflush(stdout);
 
-
-
+    /*
+    mouse.win.x = X_A0*(lefteye.x-nosetip.x+42)*LREYE_WEIGHT+X_A0*(righteye.x-nosetip.x-52)*(1-LREYE_WEIGHT) +1920*(1-LREYE_WEIGHT);
+    mouse.win.y = Y_A0*(lefteye.y-nosetip.y+74)*LREYE_WEIGHT+Y_A0*(righteye.y-nosetip.y+65)*(1-LREYE_WEIGHT) +1080*(1-LREYE_WEIGHT);
+    //if(abs(mouse.win.x-mouse.root.x) < 10 && abs((mouse.win.y-mouse.root.y) < 10))
+    {
+      mouse.root.x += mouse.win.x;
+      mouse.root.y += mouse.win.y;
+      mouse.root.x /= 2;
+      mouse.root.y /= 2;
+      XWarpPointer(display, window[i], window[i], 0, 0, 0, 0, mouse.root.x, mouse.root.y);
+    }
+    */
+      mouse.root.x = 1920+NOSE_AX*nosetip.x;
+      mouse.root.y = NOSE_AY*nosetip.y;
+      mouse.root.x += X_A0*((lefteye.x+righteye.x)/2-nosetip.x);
+      mouse.root.y += Y_A0*((lefteye.y+righteye.y)/2-nosetip.x-73);
+      XWarpPointer(display, window[i], window[i], 0, 0, 0, 0, mouse.root.x, mouse.root.y);
     //Save video
     //cvCreateVideoWriter
     if(cvWaitKey(30) != -1)
@@ -244,9 +274,6 @@ main(int argc, const char *argv[])
       //
       //
 
-    printf("%d %d %d %d : %d                     \r", mouse.root.x, mouse.root.y, mouse.win.x, mouse.win.y, i);
-    fflush(stdout);
-    //XWarpPointer(display, window[i], window[i], 0, 0, 0, 0, mouse.root_x, mouse.root_y);
   }
 
   ret_val = EXIT_SUCCESS;

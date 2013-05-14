@@ -17,3 +17,10 @@
 #define FOCAL_LEN 4000
 
 #define COLOR_THRESHOLD 70
+
+//MAPPING
+#define X_A0 -40
+#define Y_A0 20
+#define LREYE_WEIGHT 0.5
+#define NOSE_AX -1920/640
+#define NOSE_AY 1080/480

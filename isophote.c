@@ -32,30 +32,6 @@ display_image(const IplImage* img)
   cvReleaseImage(&image);
 }
 
-/*
-void
-isophote_init()
-{
-  int row, col;
-  float p[] =  { 0.004711, 0.069321, 0.245410, 0.361117, 0.245410, 0.069321, 0.004711};
-  float d1[] = { 0.018708, 0.125376, 0.193091, 0.00000, -0.193091,-0.125376,-0.018708};
-  float d2[] = { 0.055336, 0.13777, -0.056554,-0.273118,-0.056554, 0.137778, 0.055336};
-  filterx = cvCreateMat(7, 7, CV_32FC1);
-  filtery = cvCreateMat(7, 7, CV_32FC1);
-  filterxx = cvCreateMat(7, 7, CV_32FC1);
-  filteryy = cvCreateMat(7, 7, CV_32FC1);
-  for(row = 0; row < 7; row++)
-    for(col = 0; col < 7; col++)
-    {
-      cvSetReal2D(filterx, row, col, d1[col]*p[row]);
-      cvSetReal2D(filtery, row, col, d1[row]*p[col]);
-      cvSetReal2D(filterxx, row, col, d2[col]*p[row]);
-      cvSetReal2D(filteryy, row, col, d2[row]*p[col]);
-    }
-  printf("isophote calculation initialized.\n");
-}
-*/
-
 void
 calc_centermap(const IplImage* image, CvRect* window)
 {
@@ -73,7 +49,7 @@ calc_centermap(const IplImage* image, CvRect* window)
   //IplImage* img	    = cvCreateImage(cvGetSize(image), IPL_DEPTH_32F, 1);
   // todo: optimize
 
-  cvSmooth(eye, eye, CV_GAUSSIAN, 1, 0, 0, 0);
+  //cvSmooth(eye, eye, CV_GAUSSIAN, 1, 0, 0, 0);
   /*
   cvFilter2D(eye, grad_x, filterx, cvPoint(-1, -1));
   cvFilter2D(eye, grad_y, filtery, cvPoint(-1, -1));
@@ -81,11 +57,11 @@ calc_centermap(const IplImage* image, CvRect* window)
   cvFilter2D(eye, grad_yy, filteryy, cvPoint(-1, -1));
   cvFilter2D(grad_x, grad_xy, filtery, cvPoint(-1, -1));
   */
-  cvSobel(eye, grad_x, 1, 0, 5);
-  cvSobel(eye, grad_y, 0, 1, 5);
-  cvSobel(eye, grad_xx, 2, 0, 5);
-  cvSobel(eye, grad_yy, 0, 2, 5);
-  cvSobel(eye, grad_xy, 1, 1, 5);
+  cvSobel(eye, grad_x, 1, 0, 3);
+  cvSobel(eye, grad_y, 0, 1, 3);
+  cvSobel(eye, grad_xx, 2, 0, 3);
+  cvSobel(eye, grad_yy, 0, 2, 3);
+  cvSobel(eye, grad_xy, 1, 1, 3);
   
 
   cvSetZero(coeff); //Use grad_xy as accumulator
