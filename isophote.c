@@ -99,7 +99,7 @@ calc_centermap(const IplImage* image, CvRect* window)
 	    )
 	{
 	  accumulator = (float*)cvPtr2D(coeff, y, x, NULL);
-	  (*accumulator) += sqrt(gx*gx+2*gxy*gxy+gy*gy);
+	  (*accumulator) += (255-cvGetReal2D(eye,y,x))*sqrt(gx*gx+2*gxy*gxy+gy*gy);
 	}
       }
     }
