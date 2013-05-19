@@ -1,6 +1,6 @@
-/* detect face -> track face -> detect eye center(pupil) -> compute pupil shift -> determine gaze position
- *			      -> detect eye corner -compute head pose		-^
- *			      -> detect nares	   - ^
+/* detect face -> detect eye center -> compute pupil shift -> determine gaze position
+ *			      X-> detect eye corner -compute head pose		-^
+ *			      -> detect nosetip	   - ^
  *			      Assumption: distance form webcam to nose >= eye corner to nose
  *			      Assumption: Z >> F, Za approx Zb approx Zc
  *			      so 2D->3D mapping has only one possible solution
@@ -11,7 +11,8 @@
 #include "tracking.h"
 #include "center_localize.h"
 #include "isophote.h"
-#define CENTERMAP
+//#define CENTERMAP
+#define USE_HAAR_REFINE
 #define CASCADE_XML_FILENAME_EYEL "haarcascade_mcs_lefteye.xml"
 #define CASCADE_XML_FILENAME_EYER "haarcascade_mcs_righteye.xml"
 #define CASCADE_XML_FILENAME_NOSE "haarcascade_mcs_nose.xml"
@@ -53,7 +54,8 @@ main(int argc, const char *argv[])
   //XLIB VAR Init
   Display* display = XOpenDisplay(NULL);
   assert(display);
-  int Screen_Count = XScreenCount(display);
+  //int Screen_Count = XScreenCount(display);
+  int Screen_Count = XScreenCount(display); //For laptop
   Window* window = (Window *)malloc(sizeof(Window)*Screen_Count);
   Window ret;
   Mouse mouse;
@@ -78,7 +80,7 @@ main(int argc, const char *argv[])
   int counter = 0;
 
   printf("Capturing : %dx%d \n", res_w, res_h);
-  cvNamedWindow("Window", CV_WINDOW_AUTOSIZE);
+  cvNamedWindow("Window", CV_WINDOW_NORMAL);
 
   CvRect tracking_window;
   CvPoint nosetip, lefteye, righteye;
@@ -185,7 +187,7 @@ main(int argc, const char *argv[])
       //find pupil using isophote curvature
       //LEFT EYE
       cvSetImageROI(image, l_eye);
-      /*
+#ifdef USE_HAAR_REFINE
       if(!Haar_Detect(image, haarclassifier_eyel, mem_storage, &tracking_window))
       {
 	l_eye.x += tracking_window.x;
@@ -195,7 +197,7 @@ main(int argc, const char *argv[])
 	//printf("eye:%d, %d @ %d, %d\n", l_eye.x, l_eye.y, l_eye.x, l_eye.y);
 	cvSetImageROI(image, l_eye);
       }
-      */
+#endif
       cvRectangle(image, cvPoint(0, 0),
 	cvPoint(l_eye.width, l_eye.height),
 	CV_RGB(0, 0, 255), 3, 8, 0);
@@ -203,7 +205,7 @@ main(int argc, const char *argv[])
       cvSaveImage("lefteye.png", image, 0);
 #endif
 #ifdef CENTERMAP
-      calc_centermap(image, &tracking_window);
+      calc_stable_ic(image, &tracking_window);
       //cvRectangle(image, cvPoint(tracking_window.x, tracking_window.y),
 //	cvPoint(tracking_window.x+tracking_window.width, tracking_window.y+tracking_window.height),
 //	CV_RGB(255, 0, 0), 3, 8, 0);
@@ -225,7 +227,7 @@ main(int argc, const char *argv[])
 
       //RIGHT EYE
       cvSetImageROI(image, r_eye);
-      /*
+#ifdef USE_HAAR_REFINE
       if(!Haar_Detect(image, haarclassifier_eyer, mem_storage, &tracking_window))
       {
 	r_eye.x += tracking_window.x;
@@ -235,7 +237,7 @@ main(int argc, const char *argv[])
 	//printf("right eye:%d, %d @ %d, %d\n", r_eye.x, r_eye.y, r_eye.x, r_eye.y);
 	cvSetImageROI(image, r_eye);
       }
-      */
+#endif
       cvRectangle(image, cvPoint(0, 0),
 	cvPoint(r_eye.width, r_eye.height),
 	CV_RGB(0, 0, 255), 3, 8, 0);
@@ -249,7 +251,7 @@ main(int argc, const char *argv[])
       cvSaveImage("right.png", image, 0);
 #endif
 #ifdef CENTERMAP
-      calc_centermap(image, &tracking_window);
+      calc_stable_ic(image, &tracking_window);
       cvCircle(image, CALC_POINT(tracking_window),3,
 	  CV_RGB(255, 0, 0), 1, 8, 0);
       righteye.x = tracking_window.x+PUPIL_SIZE/2+r_eye.x;
@@ -282,14 +284,15 @@ main(int argc, const char *argv[])
     }
     */
       mouse.root.x = 1920+NOSE_AX*nosetip.x;
-      mouse.root.y = NOSE_AY*nosetip.y;
+      mouse.root.y = -540+NOSE_AY*nosetip.y;
       mouse.root.x += X_A0*((lefteye.x+righteye.x)/2-nosetip.x);
-      mouse.root.y += Y_A0*((lefteye.y+righteye.y)/2-nosetip.x-73)+800;
-      //XWarpPointer(display, window[i], window[i], 0, 0, 0, 0, mouse.root.x, mouse.root.y);
-      printf("%d %d %d %d : %d                     \r", mouse.root.x, mouse.root.y, mouse.win.x, mouse.win.y, i);
+      //mouse.root.y += Y_A0*((lefteye.y+righteye.y)/2-nosetip.y-73)+800;
+      XWarpPointer(display, 0, window[i], 0, 0, 0, 0, mouse.root.x, mouse.root.y);
+      printf("%d  \r",X_A0*((lefteye.x+righteye.x)/2-nosetip.x)); 
+      //printf("\n%d %d %d %d : %d                     \r", mouse.root.x, mouse.root.y, mouse.win.x, mouse.win.y, i);
     //Save video
     //cvCreateVideoWriter
-    if(cvWaitKey(30) != -1)
+    if(cvWaitKey(30) == 'q')
       goto RELEASE_OpenCV_RESOURCE;
       //goto RELEASE_XLib_RESOURCE;
       //
@@ -305,6 +308,7 @@ RELEASE_OpenCV_RESOURCE:
   camshift_free(&face_obj);
 #endif
   cvDestroyWindow("Window");
+  /* Let OS Handle It !
   cvReleaseImage(&image);
   cvReleaseHaarClassifierCascade(&haarclassifier_eyer);
   cvReleaseHaarClassifierCascade(&haarclassifier_eyel);
@@ -312,6 +316,7 @@ RELEASE_OpenCV_RESOURCE:
   cvReleaseHaarClassifierCascade(&haarclassifier_face);
   cvReleaseMemStorage(&mem_storage);
   cvReleaseCapture(&capture);
+  */
 RELEASE_XLib_RESOURCE:
   free(window);
   XCloseDisplay(display);

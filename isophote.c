@@ -35,10 +35,9 @@ display_image(const IplImage* img)
 void
 calc_centermap(const IplImage* image, CvRect* window)
 {
-  assert(image->nChannels == 3);
   IplImage* eye	    = cvCreateImage(cvGetSize(image), image->depth, 1);
-  cvCvtColor(image, eye, CV_RGB2GRAY);
-  cvThreshold(eye, eye, COLOR_THRESHOLD, 255, CV_THRESH_TRUNC);
+  cvCopy(image, eye, NULL);
+  //cvThreshold(eye, eye, COLOR_THRESHOLD, 255, CV_THRESH_TRUNC);
   //display_image(eye);
   IplImage* grad_x  = cvCreateImage(cvGetSize(image), IPL_DEPTH_16S, 1);
   IplImage* grad_y  = cvCreateImage(cvGetSize(image), IPL_DEPTH_16S, 1);
@@ -114,9 +113,6 @@ calc_centermap(const IplImage* image, CvRect* window)
   //window->y = cvGetSize(coeff).height/2;
   window->x = max_loc.x;
   window->y = max_loc.y;
-  window->width = PUPIL_SIZE/2;
-  window->height = PUPIL_SIZE/2;
-
 
   CvConnectedComp track_comp;
   //printf("Iteration: %d\n", 
@@ -140,4 +136,101 @@ calc_centermap(const IplImage* image, CvRect* window)
   cvReleaseImage(&grad_y);
   cvReleaseImage(&grad_x);
   cvReleaseImage(&eye);
+}
+
+void
+calc_stable_ic(const IplImage* image, CvRect* window)
+{
+  CvRect center[3];
+  CvPoint centerp[3];
+  assert(image->nChannels == 3);
+  IplImage* eye  = cvCreateImage(cvGetSize(image), image->depth, 1);
+  cvCvtColor(image, eye, CV_RGB2GRAY);
+
+  IplImage* half  = cvCreateImage(cvSize(eye->width/2, eye->height/2), image->depth, 1);
+  cvPyrDown(eye, half, CV_GAUSSIAN_5x5);
+  IplImage* doub  = cvCreateImage(cvSize(eye->width*2, eye->height*2), image->depth, 1);
+  cvPyrUp(eye, doub, CV_GAUSSIAN_5x5);
+
+  /*
+  IplImage* half1  = cvCreateImage(cvSize(eye->width/4, eye->height/4), image->depth, 1);
+  cvPyrDown(eye, half1, CV_GAUSSIAN_5x5);
+  IplImage* doub1  = cvCreateImage(cvSize(eye->width*4, eye->height*4), image->depth, 1);
+  cvPyrUp(eye, doub1, CV_GAUSSIAN_5x5);
+  */
+
+  center[0].width = PUPIL_SIZE/4;
+  center[0].height = PUPIL_SIZE/4;
+  center[1].width = PUPIL_SIZE/2;
+  center[1].height = PUPIL_SIZE/2;
+  center[2].width = PUPIL_SIZE;
+  center[2].height = PUPIL_SIZE;
+
+  //calc_centermap(half1, center);
+  calc_centermap(half, center);
+  calc_centermap(eye, center+1); //ORG
+  calc_centermap(doub, center+2);
+  //calc_centermap(doub1, center+4);
+
+  cvReleaseImage(&half);
+  cvReleaseImage(&doub);
+  //cvReleaseImage(&half1);
+  //cvReleaseImage(&doub1);
+  cvReleaseImage(&eye);
+
+  inline point_cmp(const void* p1, const void* p2)
+  {
+    CvPoint* p= (CvPoint*)p1;
+    CvPoint* q= (CvPoint*)p2;
+    int psq = p->x * p->x + p->y * p->y;
+    int qsq = q->x * q->x + q->y * q->y;
+    return(psq-qsq);
+  }
+
+  centerp[0] = CALC_POINT(center[0]);
+  centerp[1] = CALC_POINT(center[1]);
+  centerp[2] = CALC_POINT(center[2]);
+  //centerp[3] = CALC_POINT(center[3]);
+  //centerp[4] = CALC_POINT(center[4]);
+
+  centerp[0].x *= 2;
+  centerp[0].y *= 2;
+  centerp[2].x /= 2;
+  centerp[2].y /= 2;
+/*
+  centerp[3].x /= 2;
+  centerp[3].y /= 2;
+  centerp[4].x /= 4;
+  centerp[4].y /= 4;
+  */
+  qsort(centerp, 3, sizeof(CvPoint), point_cmp);
+/*
+  printf("%d, %d #", centerp[0].x, centerp[0].y);
+  printf("%d, %d #", centerp[1].x, centerp[1].y);
+  printf("%d, %d \n", centerp[2].x, centerp[2].y);
+  printf("\n");
+  */
+
+  *window = CALC_RECT(centerp[1].x, centerp[1].y, window->width, window->height);
+ /*
+  int tmpa = point_cmp(centerp+0, centerp+1);
+  int tmpb = point_cmp(centerp+1, centerp+2);
+  int tmpc = point_cmp(centerp+2, centerp+0);
+  if(tmpa*tmpb >=0)
+  {
+    window->x = centerp[1].x;
+    window->y = centerp[1].y;
+  }
+  else if(tmpb*tmpc)
+  {
+    window->x = centerp[2].x;
+    window->y = centerp[2].y;
+  }
+  else
+  {
+    window->x = centerp[0].x;
+    window->y = centerp[0].y;
+  }
+  */
+
 }

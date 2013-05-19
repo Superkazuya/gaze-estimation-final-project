@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 extern void calc_centermap(const IplImage*, CvRect*);
+extern void calc_stable_ic(const IplImage*, CvRect*);
 extern void debug_print_singlechannel(const IplImage*);
 //extern void calc_grad_x(const IplImage*, IplImage* );
 //extern void calc_grad_y(const IplImage*, IplImage* );

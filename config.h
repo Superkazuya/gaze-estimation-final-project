@@ -1,5 +1,5 @@
 #ifndef CAMSHIFT
-#define CAMSHIFT 1
+#define CAMSHIFT 0
 #endif
 //Macros
 #define ABOVE_ZERO(X) (X > 0 ? X : 0)
@@ -8,7 +8,7 @@
 //#define CALC_POINT(X) cvPoint(X->x+X->width/2, X->y+X->height/2)
 
 //NOSE/EYE POSITION EST
-#define EYE_UPPER 0.67
+#define EYE_UPPER 0.72
 #define EYE_LOWER 0.5
 #define EYE_LR 0.2
 
@@ -25,11 +25,11 @@
 #define COLOR_THRESHOLD 70
 
 //MAPPING
-#define X_A0 -100
+#define X_A0 -80
 #define Y_A0 50
 #define LREYE_WEIGHT 0.5
 #define NOSE_AX -1920/640
-#define NOSE_AY 1080/480
+#define NOSE_AY 2*1080/480
 
 //Hierarchical Settings
 #define EYE_WID 20
